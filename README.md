@@ -1,2 +1,2 @@
 # CardCaptor
-Python NFC library for VISA and MasterCard with HydraNFC
+Python NFC library to read VISA and MasterCard with HydraNFC
