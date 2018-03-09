@@ -21,7 +21,7 @@ class HydraNFC():
     def connect(self):
         self._serial=serial.Serial(self._port,timeout=self._timeout)
 
-    def send(self,cmd):
+    def send(self,cmd,read=None):
 	'''
 	Send data to the TRF7970A chip
 	
@@ -29,23 +29,38 @@ class HydraNFC():
 	0x00 -> Chip status control 
 	'''
 	self.cs_on()
+	print("Sendind cmd -> "+self.array_to_str(cmd)) 
 	size = chr(len(cmd))
-	self._serial.write('\x05\x00' + size + '\x00\x00') 
+	resp_length = '\x00\x00'
+        if read != None:
+            resp_length = '\x00' + chr(read_len)
+	self._serial.write('\x05\x00' + size + resp_lenght) 
 	self._serial.write(self.array_to_str(cmd))
-	self.cd_off()
+        status = self._serial.read(1)
+        self.cmd_check_status(status)
+
+        resp = None
+        if read:
+            resp = self.str_to_array(self.__ser.read(read_len))
+	self.cs_off()
 	
     def array_to_str(self, cmd):
 	'''
 	Concat the APDU cmd in one string
 	'''
         return ''.join([chr(c) for c in cmd])
-
+    def str_to_array(self,cmd):
+	'''
+	Change the string in a array
+	'''
+	return [ord(i) for i in cmd]
     def cs_on(self):
-    '''
+    	'''
 	Put the chip select pin at on,
         this operation is needed by the hydra
         see -> https://github.com/hydrabus/hydrafw/wiki/HydraFW-HydraNFC-TRF7970A-Tutorial
-    '''
+	Function take here -> https://github.com/hydrabus/hydrafw/blob/master/contrib/bbio_hydranfc/bbio_hydranfc_init.py
+    	'''
         print("CS On")
         self._serial.write('\x02')
         status=self._serial.read(1)
@@ -60,6 +75,7 @@ class HydraNFC():
         Put the chip select pin at off,
         this operation is needed by the hydra
         see -> https://github.com/hydrabus/hydrafw/wiki/HydraFW-HydraNFC-TRF7970A-Tutorial
+	Function take here -> https://github.com/hydrabus/hydrafw/blob/master/contrib/bbio_hydranfc/bbio_hydranfc_init.py
     '''
 
         print("CS Off")
@@ -80,20 +96,32 @@ class HydraNFC():
         self.send([0x00, 0x00])
         time.sleep(0.1)
     def trf7970a_software_init(self):
+	'''
+	Initialize the chip software
+	Function take here -> https://github.com/hydrabus/hydrafw/blob/master/contrib/bbio_hydranfc/bbio_hydranfc_init.py
+	'''
 	self.cs_on()
         self._serial.write('\x05\x00\x02\x00\x00')
         self._serial.write('\x83\x83')
+	status=ser.read(1) # Read Status
+	cmd_check_status(status)
 	self.cs_off()
     def trf7970a_write_idle(self):
+	'''
+	
+	Function take here -> https://github.com/hydrabus/hydrafw/blob/master/contrib/bbio_hydranfc/bbio_hydranfc_init.py
+	'''
 	self.cs_on()
         self._serial.write('\x05\x00\x02\x00\x00')
         self._serial.write('\x80\x80')
+	status=ser.read(1) # Read Status
+	cmd_check_status(status)
 	self.cs_off()
     def reset_config(self):
         """
         Perform a reset the TRF7970A chip used by the nfc shield.
         """
-        cmd_lst_hydra = [ [ 0x83, 0x83 ],
+        cmd_lst_reset_hydra = [ [ 0x83, 0x83 ],
                     [ 0x00, 0x21 ],
                     [ 0x09, 0x00 ],
                     [ 0x0B, 0x87 ],
@@ -173,14 +201,16 @@ class HydraNFC():
             self.cmd_check_status(status)
             
 	    print("Reset hydra nfc...")
-            self.__reset_hydra_nfc()
-            self.__logger.info("")
             self.trf7970a_software_init()
             self.trf7970a_write_idle()
-            for offset in cmd_lst_hydra:
+            for offset in cmd_lst_reset_hydra:
                 self.send(offset)
                 time.sleep(0.1)
     def cmd_check_status(self, status):
+    '''
+	Function to check the response status for a cmd
+	Function take here -> https://github.com/hydrabus/hydrafw/blob/master/contrib/bbio_hydranfc/bbio_hydranfc_init.py
+    '''
         if status != '\x01':
             print status.encode('hex'),
             self.__logger.info("Check status error")
