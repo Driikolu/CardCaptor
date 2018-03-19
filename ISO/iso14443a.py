@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pynfcreader.sessions.tpdu import Tpdu
-from pynfcreader.tools import utils
+from utils.tpdu import Tpdu
 import time
 
 class Iso14443ASession(object):
     
-    def __init__(self, CID = 0, NAD = 0, device, block_size = 16):
+    def __init__(self, CID = 0, NAD = 0, device=None, block_size = 16):
         self._BlockNumber = 0 #Le numero du bloc que l'on veut lire
         self._NAD = NAD #Node Address
         self._CID = CID #Card Identifier
@@ -73,7 +72,7 @@ class Iso14443ASession(object):
         uids=[]
         
         #Select cascade level 1
-        
+
         #Set AntiCollision #1
         data = [0x93, 0x20]
         #Receive UID CLn
@@ -123,12 +122,9 @@ class Iso14443ASession(object):
                 resp = self._device.send(data,3)
 
                 uid+=uids[-1]
+            resp=self.RATS(FSDI,CDI)
 
-           
-           resp=self.RATS(FSDI,CDI)
-
-
-           return uid,resp
+        return uid,resp
 
     def RATS(self, FSDI = "0", CID = "0"):
         """
