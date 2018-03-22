@@ -12,7 +12,8 @@ import time
 
 class HydraNFC():
 
-    def __init__(self, port="/dev/ttyACM0", timeout=0.3):
+
+    def __init__(self, port="COM6", timeout=0.3):
         self._port=port
         self._timeout=timeout
 
@@ -30,11 +31,11 @@ class HydraNFC():
 	0x00 -> Chip status control 
 	'''
         self.cs_on()
-        print("Sendind cmd -> "+self.array_to_str(cmd)) 
+        print("Sendind cmd -> "+''.join([hex(ord(i))[2:] for i in self.array_to_str(cmd)]))
         size = chr(len(cmd))
         resp_length = '\x00\x00'
         if read != None:
-            resp_length = '\x00' + chr(read_len)
+            resp_length = '\x00' + chr(read)
         self._serial.write(str.encode('\x05\x00' + size + resp_length))
         self._serial.write(str.encode(self.array_to_str(cmd)))
         status = self._serial.read(1)
@@ -42,8 +43,12 @@ class HydraNFC():
 
         resp = None
         if read:
-            resp = self.str_to_array(self.__serial.read(read_len))
-        self.cs_off()
+            print('4fun++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+            resp = self.str_to_array(self._serial.read(read))
+        if not(self.cs_off()):
+            print('FAIL CS_OFF 1')
+            exit(0)
+        return resp
 	
     def array_to_str(self, cmd):
         '''
@@ -54,7 +59,7 @@ class HydraNFC():
         '''
         Change the string in a array
         '''
-        return [ord(i) for i in cmd]
+        return [ord(chr(i)) for i in cmd]
     def cs_on(self):
         '''
         Put the chip select pin at on,
@@ -64,8 +69,9 @@ class HydraNFC():
         '''
         print("CS On")
         self._serial.write(str.encode('\x02'))
+        print('********************************************')
         status=self._serial.read(1)
-        if status != '\x01':
+        if status != b'\x01':
             print("CS-ON:")
             print(status)
             print("Error")
@@ -82,7 +88,7 @@ class HydraNFC():
         print("CS Off")
         self._serial.write(str.encode('\x03'))
         status=self._serial.read(1)
-        if status != '\x01':
+        if status != b'\x01':
             print("CS-OFF:")
             print(status)
             print("Error")
@@ -103,8 +109,8 @@ class HydraNFC():
         Function to check the response status for a cmd
         Function take here -> https://github.com/hydrabus/hydrafw/blob/master/contrib/bbio_hydranfc/bbio_hydranfc_init.py
         '''
-        if status != '\x01':
-            print(status)
+        if status != b'\x01':
+            print(hex(status))
             return False
         print("Check status OK")
         return True
@@ -119,7 +125,9 @@ class HydraNFC():
         self._serial.write(str.encode('\x83\x83'))
         status=self._serial.read(1) # Read Status
         self.cmd_check_status(status)
-        self.cs_off()
+        if not(self.cs_off()):
+            print("CS_OFF 2")
+            exit(0)
     
     def trf7970a_write_idle(self):
         '''
@@ -130,7 +138,9 @@ class HydraNFC():
         self._serial.write(str.encode('\x80\x80'))
         status=self._serial.read(1) # Read Status
         self.cmd_check_status(status)
-        self.cs_off()
+        if not(self.cs_off()):
+            print('CS_OFF Faied 3')
+            exit(0)
     
     def reset_config(self):
         """
@@ -154,9 +164,7 @@ class HydraNFC():
             print("Configuration issue, a reset will be perform")
             print ("RESET")
             self._serial.write(str.encode('\x00'))
-            print("OK1")
             self._serial.write(str.encode('\x0F\n'))
-            print("OK2")
             self._serial.readline()
             self._serial.readline()
             print("Re configuration")

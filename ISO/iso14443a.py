@@ -45,14 +45,16 @@ class Iso14443ASession(object):
         REQ A ---> 0x26
         """
         resp = self._device.send([ 0x8F, 0x90, 0x3D, 0x00, 0x0F, 0x26 ])
-        
+        print("REQA -----------------------------------------------------------------")
+        print(resp)
         time.sleep(0.01)
-        
         resp = self._device.send([ 0x6C ],2)
+
+        time.sleep(0.01)
 
         resp = self._device.send([ 0x5C ],1)
 
-        if resp[0] == 0:
+        if not(resp[0]):
             raise Exception("REQ A has failed")
 
         resp = self._device.send([ 0x7F ],2)
