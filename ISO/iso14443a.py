@@ -45,16 +45,14 @@ class Iso14443ASession(object):
         REQ A ---> 0x26
         """
         resp = self._device.send([ 0x8F, 0x90, 0x3D, 0x00, 0x0F, 0x26 ])
-        print("REQA -----------------------------------------------------------------")
-        print(resp)
+        
         time.sleep(0.01)
+        
         resp = self._device.send([ 0x6C ],2)
-
-        time.sleep(0.01)
 
         resp = self._device.send([ 0x5C ],1)
 
-        if not(resp[0]):
+        if resp[0] == 0:
             raise Exception("REQ A has failed")
 
         resp = self._device.send([ 0x7F ],2)
@@ -242,26 +240,16 @@ class Iso14443ASession(object):
             block_size = self.get_block_size()
 
         block_lst = []
-        fields_lst = [data[i,i+block_size] for i in range(0,len(data),block_size)]
+        fields_lst = [data[i:i+block_size] for i in range(0,len(data),block_size)]
         for field in fields_lst[:-1]:
             frame = self.getIBlock(field, chaining_bit=True)
             block_lst.append(frame)
 
-        frame = self.getIBlock(field_lst[-1], chaining_bit=False)
+        frame = self.getIBlock(fields_lst[-1], chaining_bit=False)
         block_lst.append(frame)
 
         return block_lst
-
-    def _send_tpdu(self, tpdu):
-
-        data = raw_to_data(tpdu)
-
-        resp = self._device.send_raw(data, 16)
-
-        resp = Tpdu(resp)
-        
-        return resp
-
+ 
     def raw_to_data(self,raw):
         bitslen = len(raw) << 4
         bitslen = [ bitslen >> 8, bitslen & 0xFF]
@@ -273,6 +261,15 @@ class Iso14443ASession(object):
 
         return data
 
+    def _send_tpdu(self, tpdu):
+
+        data = self.raw_to_data(tpdu)
+
+        resp = self._device.send(data, 16)
+
+        resp = Tpdu(resp)
+        
+        return resp
 
     def send_apdu(self, apdu):
         '''

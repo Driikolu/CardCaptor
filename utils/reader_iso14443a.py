@@ -15,7 +15,6 @@
 from handler.hydra_handler import HydraNFC
 from ISO.iso14443a import Iso14443ASession
 
-
 class ReaderHydraNFC(object):
 
     def __init__(self, port="COM8", debug_mode=True, block_size = 16):

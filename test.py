@@ -1,4 +1,6 @@
+#!/usr/bin/python2
 from utils.reader_iso14443a import ReaderHydraNFC
+
 
 def get_values(hn):
     #hn.send_apdu("00 a4 04 00   0E   32 50 41 59 2E 53 59 53 2E 44 44 46 30 31   00") # PPSE entry point
@@ -28,7 +30,7 @@ def get_values(hn):
 
 
 if __name__=="__main__":
-    hn = ReaderHydraNFC(port="COM6", debug_mode=False, block_size= 24)
+    hn = ReaderHydraNFC(port="/dev/ttyACM0", debug_mode=False, block_size= 24)
     hn.connect()
     hn.field_off()
     hn.field_on()
