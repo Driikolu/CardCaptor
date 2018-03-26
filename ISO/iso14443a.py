@@ -38,6 +38,8 @@ class Iso14443ASession(object):
         self._iblock_pcb_number ^= 1
         return self._iblock_pcb_number ^ 1
 
+
+
     def send_reqa(self):
         """
         Send request for ISO Type A
@@ -75,6 +77,8 @@ class Iso14443ASession(object):
 
         #Set AntiCollision #1
         data = [0x93, 0x20]
+        data = self.raw_to_data(data)
+        
         #Receive UID CLn
         resp = self._device.send(data,5)
         
@@ -82,7 +86,7 @@ class Iso14443ASession(object):
         
         #send select #1
         data = [0x93, 0x70] + uids[-1]
-
+        data = self.raw_to_data(data,False)
         resp = self._device.send(data,3)
 
 
@@ -94,6 +98,7 @@ class Iso14443ASession(object):
 
             #Set AntiCollision #2
             data = [0x95, 0x20]
+            data = self.raw_to_data(data)
             #Receive UID CLn
             resp = self._device.send(data,5)
 
@@ -101,6 +106,7 @@ class Iso14443ASession(object):
 
             #Send select #2
             data = [0x95, 0x70] + uids[-1]
+            data = self.raw_to_data(data,False)
 
             resp = self._device.send(data,3)
 
@@ -111,6 +117,7 @@ class Iso14443ASession(object):
 
                 #Set AntiCollision #3
                 data = [0x97, 0x20]
+                data = self.raw_to_data(data)
                 #Receive UID CLn
                 resp = self._device.send(data,3)
 
@@ -118,6 +125,7 @@ class Iso14443ASession(object):
 
                 #Send select #3
                 data = [0x97, 0x70] + uids[-1]
+                data = self.raw_to_data(data,False)
 
                 resp = self._device.send(data,3)
 
@@ -138,7 +146,8 @@ class Iso14443ASession(object):
         """
 
         data = [0xE0, int(FSDI + CID, 16)]
-        
+        data = self.raw_to_data(data,False)
+
         resp = self._device.send(data, 20)
 
 
@@ -168,6 +177,7 @@ class Iso14443ASession(object):
 
     def send_pps(self, CID = 0x0, PPS1 = False, DRI = 0x0, DSI = 0x0):
         data = [ 0xD0, 0x11, 0x00 ]
+        data = self.raw_to_data(data,False)
 
         resp =  self._device.send(data, 3)
 
@@ -249,13 +259,15 @@ class Iso14443ASession(object):
         block_lst.append(frame)
 
         return block_lst
- 
-    def raw_to_data(self,raw):
+
+    def raw_to_data(self,raw,crc=True):
         bitslen = len(raw) << 4
         bitslen = [ bitslen >> 8, bitslen & 0xFF]
         bitslen.extend(raw)
 
         crc_field = 0x91
+        if crc:
+            crc_field = 0x90
         data = [0x8F, crc_field, 0x3D]
         data.extend(bitslen)
 
@@ -263,9 +275,16 @@ class Iso14443ASession(object):
 
     def _send_tpdu(self, tpdu):
 
-        data = self.raw_to_data(tpdu)
+        data = self.raw_to_data(tpdu,False)
 
         resp = self._device.send(data, 16)
+        time.sleep(0.2)
+
+        resp = self._device.send([0x5C], 1)
+        print(resp)
+        print(resp[0])
+        resp = self._device.send([0x7F], resp[0])
+    
 
         resp = Tpdu(resp)
         
